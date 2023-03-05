@@ -58,8 +58,14 @@ static constexpr const float note_freqs[] = {
 };
 
 struct square_gen {
-  [[nodiscard]] float operator()(unsigned n) {
-    return ((n / 40) % 2) * 2.0f - 1.0f;
+  [[nodiscard]] constexpr float operator()(unsigned n) {
+    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
+    constexpr const auto p = frate / note_freqs[49];
+    constexpr const auto half_p = p / 2.0f;
+
+    const auto fn = static_cast<float>(n);
+    const auto mod = static_cast<int>(fn / half_p) % 2;
+    return mod == 1 ? 1.0f : -1.0f;
   }
 };
 
