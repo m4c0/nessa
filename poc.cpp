@@ -1,5 +1,53 @@
 import siaudio;
 
+enum notes {
+  C3 = 29,
+  Db3,
+  D3,
+  Eb3,
+  E3,
+  F3,
+  Gb3,
+  G3,
+  Ab3,
+  A3,
+  Bb3,
+  C4,
+  Db4,
+  D4,
+  Eb4,
+  E4,
+  F4,
+  Gb4,
+  G4,
+  Ab4,
+  A4 = 49,
+  Bb4,
+  B4,
+  C5,
+  Db5,
+  D5,
+  Eb5,
+  E5,
+  F5,
+  Gb5,
+  G5,
+  Ab5,
+  A5,
+  Bb5,
+  C6,
+  Db6,
+  D6,
+  Eb6,
+  E6,
+  F6,
+  Gb6,
+  G6,
+  Ab6,
+  A6,
+  Bb6,
+};
+
 static constexpr const float note_freqs[] = {
     16.351597831287414, 17.323914436054505,
     18.354047994837977, 19.445436482630058,
@@ -56,12 +104,16 @@ static constexpr const float note_freqs[] = {
     6644.875161279122,  7040.0,
     7458.620184289437,  7902.132820097988,
 };
+class square_gen {
+  volatile notes m_note{};
 
-struct square_gen {
-  [[nodiscard]] constexpr float operator()(unsigned n) {
+public:
+  [[nodiscard]] constexpr auto &note() noexcept { return m_note; }
+
+  [[nodiscard]] float operator()(unsigned n) const {
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
-    constexpr const auto p = frate / note_freqs[49];
-    constexpr const auto half_p = p / 2.0f;
+    const auto p = frate / note_freqs[m_note];
+    const auto half_p = p / 2.0f;
 
     const auto fn = static_cast<float>(n);
     const auto mod = static_cast<int>(fn / half_p) % 2;
@@ -70,26 +122,43 @@ struct square_gen {
 };
 
 class mixer {
-  square_gen m_g;
+  square_gen m_sq1;
   volatile unsigned m_index;
 
 public:
   [[nodiscard]] float operator()() noexcept {
     auto i = m_index;
     m_index = i + 1;
-    return m_g(i);
+    return m_sq1(i);
   }
 
-  [[nodiscard]] unsigned index() const noexcept { return m_index; }
+  [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
+  [[nodiscard]] constexpr unsigned index() const noexcept { return m_index; }
 };
 
 int main() {
   mixer m{};
+  m.square_1().note() = C4;
   siaudio::streamer s{[&](float *buf, unsigned len) {
     for (auto i = 0; i < len; ++i) {
       *buf++ = m();
     }
   }};
   while (m.index() < 44100) {
+  }
+  m.square_1().note() = D4;
+  while (m.index() < 44100 * 2) {
+  }
+  m.square_1().note() = E4;
+  while (m.index() < 44100 * 3) {
+  }
+  m.square_1().note() = F4;
+  while (m.index() < 44100 * 4) {
+  }
+  m.square_1().note() = F4;
+  while (m.index() < 44100 * 5) {
+  }
+  m.square_1().note() = F4;
+  while (m.index() < 44100 * 6) {
   }
 }
