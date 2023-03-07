@@ -1,6 +1,7 @@
 import siaudio;
 
 enum notes {
+  MUTE = -1,
   C3 = 29,
   Db3,
   D3,
@@ -12,6 +13,7 @@ enum notes {
   Ab3,
   A3,
   Bb3,
+  B3,
   C4,
   Db4,
   D4,
@@ -35,6 +37,7 @@ enum notes {
   Ab5,
   A5,
   Bb5,
+  B5,
   C6,
   Db6,
   D6,
@@ -46,6 +49,7 @@ enum notes {
   Ab6,
   A6,
   Bb6,
+  B6,
 };
 
 static constexpr const float note_freqs[] = {
@@ -105,12 +109,15 @@ static constexpr const float note_freqs[] = {
     7458.620184289437,  7902.132820097988,
 };
 class square_gen {
-  volatile notes m_note{};
+  volatile notes m_note{MUTE};
 
 public:
   [[nodiscard]] constexpr auto &note() noexcept { return m_note; }
 
   [[nodiscard]] float operator()(unsigned n) const {
+    if (m_note == MUTE)
+      return 0;
+
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
     const auto p = frate / note_freqs[m_note];
     const auto half_p = p / 2.0f;
@@ -136,29 +143,28 @@ public:
   [[nodiscard]] constexpr unsigned index() const noexcept { return m_index; }
 };
 
+void play(mixer &m, unsigned i, notes n) {
+  constexpr const auto bpm = 128;
+
+  m.square_1().note() = n;
+  while (m.index() < i * siaudio::os_streamer::rate * 60 / bpm) {
+  }
+}
+
 int main() {
   mixer m{};
-  m.square_1().note() = C4;
   siaudio::streamer s{[&](float *buf, unsigned len) {
     for (auto i = 0; i < len; ++i) {
       *buf++ = m();
     }
   }};
-  while (m.index() < 44100) {
-  }
-  m.square_1().note() = D4;
-  while (m.index() < 44100 * 2) {
-  }
-  m.square_1().note() = E4;
-  while (m.index() < 44100 * 3) {
-  }
-  m.square_1().note() = F4;
-  while (m.index() < 44100 * 4) {
-  }
-  m.square_1().note() = F4;
-  while (m.index() < 44100 * 5) {
-  }
-  m.square_1().note() = F4;
-  while (m.index() < 44100 * 6) {
-  }
+
+  play(m, 1, E4);
+  play(m, 2, MUTE);
+  play(m, 3, B3);
+  play(m, 4, C4);
+  play(m, 5, D4);
+  play(m, 6, MUTE);
+  play(m, 7, C4);
+  play(m, 8, B3);
 }
