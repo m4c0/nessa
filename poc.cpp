@@ -1,8 +1,8 @@
 import siaudio;
 
-enum notes {
+enum midi_note {
   MUTE = -1,
-  C3 = 29,
+  C3 = 48,
   Db3,
   D3,
   Eb3,
@@ -23,7 +23,7 @@ enum notes {
   Gb4,
   G4,
   Ab4,
-  A4 = 49,
+  A4,
   Bb4,
   B4,
   C5,
@@ -51,6 +51,8 @@ enum notes {
   Bb6,
   B6,
 };
+static_assert(A4 == 69);
+static_assert(B6 == 95);
 
 static constexpr const float note_freqs[] = {
     16.351597831287414, 17.323914436054505,
@@ -108,11 +110,27 @@ static constexpr const float note_freqs[] = {
     6644.875161279122,  7040.0,
     7458.620184289437,  7902.132820097988,
 };
-class square_gen {
-  volatile notes m_note{MUTE};
+static constexpr const auto C0_MIDI_ID = 12;
+static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
+
+enum duration {
+  DUR_1_4 = 1,
+  DUR_2_4,
+  DUR_3_4,
+  DUR_4_4,
+  DUR_5_4,
+  DUR_6_4,
+  DUR_7_4,
+  DUR_8_4,
+};
+
+class single_note {
+  volatile midi_note m_note{MUTE};
+  volatile duration m_duration{};
 
 public:
-  [[nodiscard]] constexpr auto &note() noexcept { return m_note; }
+  constexpr single_note() = default;
+  constexpr single_note(midi_note n, duration d) : m_note{n}, m_duration{d} {}
 
   [[nodiscard]] float operator()(unsigned n) const {
     if (m_note == MUTE)
@@ -120,10 +138,20 @@ public:
 
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
     const auto p = frate / note_freqs[m_note];
-    const auto half_p = p / 2.0f;
-
     const auto fn = static_cast<float>(n);
-    const auto mod = static_cast<int>(fn / half_p) % 2;
+    return fn / p;
+  }
+};
+
+class square_gen {
+  single_note m_note{};
+
+public:
+  [[nodiscard]] constexpr auto &note() noexcept { return m_note; }
+
+  [[nodiscard]] float operator()(unsigned n) const {
+    auto half = m_note(n) * 2.0f;
+    const auto mod = static_cast<int>(half) % 2;
     return mod == 1 ? 1.0f : -1.0f;
   }
 };
@@ -143,10 +171,10 @@ public:
   [[nodiscard]] constexpr unsigned index() const noexcept { return m_index; }
 };
 
-void play(mixer &m, unsigned i, notes n) {
-  constexpr const auto bpm = 128;
+void play(mixer &m, unsigned i, midi_note n, duration d) {
+  constexpr const auto bpm = 140;
 
-  m.square_1().note() = n;
+  m.square_1().note() = {n, d};
   while (m.index() < i * siaudio::os_streamer::rate * 60 / bpm) {
   }
 }
@@ -159,12 +187,25 @@ int main() {
     }
   }};
 
-  play(m, 1, E4);
-  play(m, 2, MUTE);
-  play(m, 3, B3);
-  play(m, 4, C4);
-  play(m, 5, D4);
-  play(m, 6, MUTE);
-  play(m, 7, C4);
-  play(m, 8, B3);
+  play(m, 1, E4, DUR_2_4);
+  play(m, 3, B3, DUR_1_4);
+  play(m, 4, C4, DUR_1_4);
+  play(m, 5, D4, DUR_2_4);
+  play(m, 7, C4, DUR_1_4);
+  play(m, 8, B3, DUR_1_4);
+  play(m, 9, A3, DUR_2_4);
+  play(m, 11, A3, DUR_1_4);
+  play(m, 12, C4, DUR_1_4);
+  play(m, 13, E4, DUR_2_4);
+  play(m, 15, D4, DUR_1_4);
+  play(m, 16, C4, DUR_1_4);
+  play(m, 16, B3, DUR_1_4);
+  play(m, 17, B3, DUR_2_4);
+  play(m, 19, C4, DUR_1_4);
+  play(m, 20, D4, DUR_2_4);
+  play(m, 22, E4, DUR_2_4);
+  play(m, 24, C4, DUR_2_4);
+  play(m, 26, A3, DUR_2_4);
+  play(m, 28, A3, DUR_2_4);
+  play(m, 30, MUTE, DUR_2_4);
 }
