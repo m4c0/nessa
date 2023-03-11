@@ -162,9 +162,11 @@ class mixer {
 
 public:
   [[nodiscard]] float operator()() noexcept {
+    constexpr const auto volume = 0.5f;
+
     auto i = m_index;
     m_index = i + 1;
-    return m_sq1(i);
+    return m_sq1(i) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
