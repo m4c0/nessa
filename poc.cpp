@@ -125,7 +125,7 @@ enum duration {
 };
 
 class single_note {
-  volatile midi_note m_note{MUTE};
+  midi_note m_note{MUTE};
 
 public:
   constexpr single_note() = default;
