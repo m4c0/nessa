@@ -130,26 +130,30 @@ class player {
   mixer m{};
   volatile unsigned m_index;
 
+  [[nodiscard]] float time(unsigned idx) const noexcept {
+    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
+    return static_cast<float>(idx) / frate;
+  }
+
 public:
   void operator()(float *buf, unsigned len) {
-    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
-
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
-      auto t = static_cast<float>(idx) / frate;
-      *buf++ = m(t);
+      *buf++ = m(time(idx));
     }
     m_index = idx;
   }
 
   [[nodiscard]] auto current_note_index() const noexcept {
-    constexpr const auto bpm = 140;
-    return m_index * bpm / (siaudio::os_streamer::rate * 60);
+    constexpr const float bpm = 140.0;
+    constexpr const float bps = bpm / 60.0;
+    constexpr const float notes_per_beat = 2; // 4/4?
+    return static_cast<unsigned>(time(m_index) * bps * notes_per_beat);
   }
 
   void set_note(midi_note n) noexcept {
     m.square_1().set_freq(note_freqs[n]);
-    m.square_1().set_duty_cycle(0.1);
+    m.square_1().set_duty_cycle(0.25);
   }
 };
 
