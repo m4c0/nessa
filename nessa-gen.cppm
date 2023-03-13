@@ -7,7 +7,7 @@ class saw_tooth {
 public:
   constexpr void set_freq(float f) noexcept { m_period = 1.0f / f; }
 
-  [[nodiscard]] constexpr float operator()(unsigned t) const noexcept {
+  [[nodiscard]] constexpr float operator()(float t) const noexcept {
     auto n = t / m_period;
     auto fr = n - (int)n;
     return fr * 2.0f - 1.0f;
@@ -21,7 +21,7 @@ public:
   constexpr void set_freq(float f) noexcept { m_period = 1.0f / f; }
   constexpr void set_duty_cycle(float d) noexcept { m_duty = d; }
 
-  [[nodiscard]] constexpr float operator()(unsigned t) const noexcept {
+  [[nodiscard]] constexpr float operator()(float t) const noexcept {
     auto n = t / m_period;
     auto fr = n - (int)n;
     return fr < m_duty ? -1 : 1;

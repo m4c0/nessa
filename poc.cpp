@@ -1,3 +1,4 @@
+import nessa;
 import siaudio;
 
 enum midi_note {
@@ -113,55 +114,13 @@ static constexpr const float note_freqs[] = {
 static constexpr const auto C0_MIDI_ID = 12;
 static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
-enum duration {
-  DUR_1_4 = 1,
-  DUR_2_4,
-  DUR_3_4,
-  DUR_4_4,
-  DUR_5_4,
-  DUR_6_4,
-  DUR_7_4,
-  DUR_8_4,
-};
-
-class single_note {
-  midi_note m_note{MUTE};
-
-public:
-  constexpr single_note() = default;
-  constexpr single_note(midi_note n) : m_note{n} {}
-
-  [[nodiscard]] float operator()(unsigned n) const {
-    if (m_note == MUTE)
-      return 0;
-
-    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
-    const auto p = frate / note_freqs[m_note];
-    const auto fn = static_cast<float>(n);
-    return fn / p;
-  }
-};
-
-class square_gen {
-  single_note m_note{};
-
-public:
-  [[nodiscard]] constexpr auto &note() noexcept { return m_note; }
-
-  [[nodiscard]] float operator()(unsigned n) const {
-    auto half = m_note(n) * 2.0f;
-    const auto mod = static_cast<int>(half) % 2;
-    return mod == 1 ? 1.0f : -1.0f;
-  }
-};
-
 class mixer {
-  square_gen m_sq1;
+  nessa::gen::square m_sq1;
 
 public:
-  [[nodiscard]] float operator()(unsigned i) const noexcept {
+  [[nodiscard]] float operator()(float t) const noexcept {
     constexpr const auto volume = 0.5f;
-    return m_sq1(i) * volume;
+    return m_sq1(t) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
@@ -173,19 +132,14 @@ class player {
 
 public:
   void operator()(float *buf, unsigned len) {
+    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
+
     auto idx = m_index;
-    for (auto i = 0; i < len; ++i) {
-      *buf++ = m(idx++);
+    for (auto i = 0; i < len; ++i, ++idx) {
+      auto t = static_cast<float>(idx) / frate;
+      *buf++ = m(t);
     }
     m_index = idx;
-  }
-
-  void play(unsigned i, midi_note n, duration d) {
-    constexpr const auto bpm = 140;
-
-    m.square_1().note() = {n};
-    while (m_index < i * siaudio::os_streamer::rate * 60 / bpm) {
-    }
   }
 
   [[nodiscard]] auto current_note_index() const noexcept {
@@ -193,7 +147,10 @@ public:
     return m_index * bpm / (siaudio::os_streamer::rate * 60);
   }
 
-  void set_note(midi_note n) noexcept { m.square_1().note() = {n}; }
+  void set_note(midi_note n) noexcept {
+    m.square_1().set_freq(note_freqs[n]);
+    m.square_1().set_duty_cycle(0.1);
+  }
 };
 
 extern "C" auto *poc_start() {
