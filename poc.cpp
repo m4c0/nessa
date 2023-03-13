@@ -4,7 +4,19 @@ import siaudio;
 enum midi_note {
   MUTE = -1,
   EXTEND = 0,
-  C3 = 48,
+  C2 = 36,
+  Db2,
+  D2,
+  Eb2,
+  E2,
+  F2,
+  Gb2,
+  G2,
+  Ab2,
+  A2,
+  Bb2,
+  B2,
+  C3,
   Db3,
   D3,
   Eb3,
@@ -117,14 +129,16 @@ static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
 class mixer {
   nessa::gen::square m_sq1;
+  nessa::gen::triangle m_tri1;
 
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
     constexpr const auto volume = 0.25f;
-    return m_sq1(t) * volume;
+    return (m_sq1(t) + m_tri1(t)) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
+  [[nodiscard]] constexpr auto &triangle_1() noexcept { return m_tri1; }
 };
 
 class player {
@@ -152,9 +166,16 @@ public:
     return static_cast<unsigned>(time(m_index) * bps * notes_per_beat);
   }
 
-  void set_note(midi_note n) noexcept {
-    m.square_1().set_freq(note_freqs[n]);
-    m.square_1().set_duty_cycle(0.25);
+  void set_sq1_note(midi_note n) noexcept {
+    if (n == EXTEND)
+      return;
+    m.square_1().set_freq(note_freqs[n - C0_MIDI_ID]);
+    m.square_1().set_duty_cycle(0.5);
+  }
+  void set_tri1_note(midi_note n) noexcept {
+    if (n == EXTEND)
+      return;
+    m.triangle_1().set_freq(note_freqs[n - C0_MIDI_ID]);
   }
 };
 
@@ -164,22 +185,26 @@ extern "C" auto *poc_start() {
 }
 extern "C" bool poc_loop() {
   constexpr const auto note_count = 32;
-  constexpr const midi_note notes[note_count] = {
+  constexpr const midi_note inst_1[note_count] = {
       E4, EXTEND, B3, C4,     D4, EXTEND, C4,   B3,     //
       A3, EXTEND, A3, C4,     E4, EXTEND, D4,   C4,     //
       B3, EXTEND, B3, C4,     D4, EXTEND, E4,   EXTEND, //
       C4, EXTEND, A3, EXTEND, A3, EXTEND, MUTE, MUTE,   //
+  };
+  constexpr const midi_note inst_3[note_count] = {
+      E3,  E4,  E3,  E4,  E3,  E4,  E3,  E4,  //
+      A2,  A3,  A2,  A3,  A2,  A3,  A2,  A3,  //
+      Ab2, Ab3, Ab2, Ab3, Ab2, Ab3, Ab2, Ab3, //
+      A2,  A3,  A2,  A3,  A2,  A3,  A2,  A3,  //
   };
   auto &p = poc_start()->producer();
   auto i = p.current_note_index();
   if (i >= note_count)
     return false;
 
-  auto n = notes[i];
-  if (n == EXTEND)
-    return true;
+  p.set_sq1_note(inst_1[i]);
+  p.set_tri1_note((midi_note)(inst_3[i]));
 
-  p.set_note(n);
   return true;
 }
 
