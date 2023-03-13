@@ -3,6 +3,7 @@ import siaudio;
 
 enum midi_note {
   MUTE = -1,
+  EXTEND = 0,
   C3 = 48,
   Db3,
   D3,
@@ -119,7 +120,7 @@ class mixer {
 
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
-    constexpr const auto volume = 0.5f;
+    constexpr const auto volume = 0.25f;
     return m_sq1(t) * volume;
   }
 
@@ -147,7 +148,7 @@ public:
   [[nodiscard]] auto current_note_index() const noexcept {
     constexpr const float bpm = 140.0;
     constexpr const float bps = bpm / 60.0;
-    constexpr const float notes_per_beat = 2; // 4/4?
+    constexpr const float notes_per_beat = 2;
     return static_cast<unsigned>(time(m_index) * bps * notes_per_beat);
   }
 
@@ -162,73 +163,24 @@ extern "C" auto *poc_start() {
   return &s;
 }
 extern "C" bool poc_loop() {
+  constexpr const auto note_count = 32;
+  constexpr const midi_note notes[note_count] = {
+      E4, EXTEND, B3, C4,     D4, EXTEND, C4,   B3,     //
+      A3, EXTEND, A3, C4,     E4, EXTEND, D4,   C4,     //
+      B3, EXTEND, B3, C4,     D4, EXTEND, E4,   EXTEND, //
+      C4, EXTEND, A3, EXTEND, A3, EXTEND, MUTE, MUTE,   //
+  };
   auto &p = poc_start()->producer();
-  switch (p.current_note_index()) {
-  case 1:
-    p.set_note(E4);
-    return true;
-  case 3:
-    p.set_note(B3);
-    return true;
-  case 4:
-    p.set_note(C4);
-    return true;
-  case 5:
-    p.set_note(D4);
-    return true;
-  case 7:
-    p.set_note(C4);
-    return true;
-  case 8:
-    p.set_note(B3);
-    return true;
-  case 9:
-    p.set_note(A3);
-    return true;
-  case 11:
-    p.set_note(A3);
-    return true;
-  case 12:
-    p.set_note(C4);
-    return true;
-  case 13:
-    p.set_note(E4);
-    return true;
-  case 15:
-    p.set_note(D4);
-    return true;
-  case 16:
-    p.set_note(C4);
-    return true;
-  case 17:
-    p.set_note(B3);
-    return true;
-  case 18:
-    p.set_note(B3);
-    return true;
-  case 20:
-    p.set_note(C4);
-    return true;
-  case 22:
-    p.set_note(D4);
-    return true;
-  case 24:
-    p.set_note(E4);
-    return true;
-  case 26:
-    p.set_note(C4);
-    return true;
-  case 28:
-    p.set_note(A3);
-    return true;
-  case 30:
-    p.set_note(A3);
-    return true;
-  case 32:
+  auto i = p.current_note_index();
+  if (i >= note_count)
     return false;
-  default:
+
+  auto n = notes[i];
+  if (n == EXTEND)
     return true;
-  }
+
+  p.set_note(n);
+  return true;
 }
 
 int main() {
