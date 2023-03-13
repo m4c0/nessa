@@ -158,56 +158,61 @@ public:
 
 class mixer {
   square_gen m_sq1;
-  volatile unsigned m_index;
 
 public:
-  [[nodiscard]] float operator()() noexcept {
+  [[nodiscard]] float operator()(unsigned i) const noexcept {
     constexpr const auto volume = 0.5f;
-
-    auto i = m_index;
-    m_index = i + 1;
     return m_sq1(i) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
-  [[nodiscard]] constexpr unsigned index() const noexcept { return m_index; }
 };
 
-void play(mixer &m, unsigned i, midi_note n, duration d) {
-  constexpr const auto bpm = 140;
+class player {
+  mixer m{};
+  volatile unsigned m_index;
 
-  m.square_1().note() = {n, d};
-  while (m.index() < i * siaudio::os_streamer::rate * 60 / bpm) {
+public:
+  void operator()(float *buf, unsigned len) {
+    auto idx = m_index;
+    for (auto i = 0; i < len; ++i) {
+      *buf++ = m(idx++);
+    }
+    m_index = idx;
   }
-}
+
+  void play(unsigned i, midi_note n, duration d) {
+    constexpr const auto bpm = 140;
+
+    m.square_1().note() = {n, d};
+    while (m_index < i * siaudio::os_streamer::rate * 60 / bpm) {
+    }
+  }
+};
 
 int main() {
-  mixer m{};
-  siaudio::streamer s{[&](float *buf, unsigned len) {
-    for (auto i = 0; i < len; ++i) {
-      *buf++ = m();
-    }
-  }};
+  siaudio::streamer s{player{}};
 
-  play(m, 1, E4, DUR_2_4);
-  play(m, 3, B3, DUR_1_4);
-  play(m, 4, C4, DUR_1_4);
-  play(m, 5, D4, DUR_2_4);
-  play(m, 7, C4, DUR_1_4);
-  play(m, 8, B3, DUR_1_4);
-  play(m, 9, A3, DUR_2_4);
-  play(m, 11, A3, DUR_1_4);
-  play(m, 12, C4, DUR_1_4);
-  play(m, 13, E4, DUR_2_4);
-  play(m, 15, D4, DUR_1_4);
-  play(m, 16, C4, DUR_1_4);
-  play(m, 16, B3, DUR_1_4);
-  play(m, 17, B3, DUR_2_4);
-  play(m, 19, C4, DUR_1_4);
-  play(m, 20, D4, DUR_2_4);
-  play(m, 22, E4, DUR_2_4);
-  play(m, 24, C4, DUR_2_4);
-  play(m, 26, A3, DUR_2_4);
-  play(m, 28, A3, DUR_2_4);
-  play(m, 30, MUTE, DUR_2_4);
+  auto &p = s.producer();
+  p.play(1, E4, DUR_2_4);
+  p.play(3, B3, DUR_1_4);
+  p.play(4, C4, DUR_1_4);
+  p.play(5, D4, DUR_2_4);
+  p.play(7, C4, DUR_1_4);
+  p.play(8, B3, DUR_1_4);
+  p.play(9, A3, DUR_2_4);
+  p.play(11, A3, DUR_1_4);
+  p.play(12, C4, DUR_1_4);
+  p.play(13, E4, DUR_2_4);
+  p.play(15, D4, DUR_1_4);
+  p.play(16, C4, DUR_1_4);
+  p.play(16, B3, DUR_1_4);
+  p.play(17, B3, DUR_2_4);
+  p.play(19, C4, DUR_1_4);
+  p.play(20, D4, DUR_2_4);
+  p.play(22, E4, DUR_2_4);
+  p.play(24, C4, DUR_2_4);
+  p.play(26, A3, DUR_2_4);
+  p.play(28, A3, DUR_2_4);
+  p.play(30, MUTE, DUR_2_4);
 }
