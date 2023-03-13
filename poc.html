@@ -1,0 +1,14 @@
+<html>
+  <head><title>Siaudio Proof-of-Concept</title></head>
+  <body>
+    <script type="text/javascript" src="out/wasm/poc.js"></script>
+    <script type="text/javascript">
+      (function() {
+        ecow({ base_dir: "out/wasm" }).then(obj => {
+          obj.start();
+        });
+      })();
+    </script>
+  </body>
+</html>
+

@@ -11,5 +11,8 @@ int main(int argc, char **argv) {
   poc->add_ref(m);
   poc->add_wsdep("siaudio", siaudio());
   poc->add_unit<>("poc");
+  poc->add_feat<setup_js>("poc");
+  poc->add_feat<export_symbol>("poc_start");
+  poc->add_feat<export_symbol>("poc_loop");
   return run_main(poc, argc, argv);
 }
