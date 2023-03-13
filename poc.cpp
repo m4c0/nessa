@@ -126,11 +126,10 @@ enum duration {
 
 class single_note {
   volatile midi_note m_note{MUTE};
-  volatile duration m_duration{};
 
 public:
   constexpr single_note() = default;
-  constexpr single_note(midi_note n, duration d) : m_note{n}, m_duration{d} {}
+  constexpr single_note(midi_note n) : m_note{n} {}
 
   [[nodiscard]] float operator()(unsigned n) const {
     if (m_note == MUTE)
@@ -184,35 +183,95 @@ public:
   void play(unsigned i, midi_note n, duration d) {
     constexpr const auto bpm = 140;
 
-    m.square_1().note() = {n, d};
+    m.square_1().note() = {n};
     while (m_index < i * siaudio::os_streamer::rate * 60 / bpm) {
     }
   }
+
+  [[nodiscard]] auto current_note_index() const noexcept {
+    constexpr const auto bpm = 140;
+    return m_index * bpm / (siaudio::os_streamer::rate * 60);
+  }
+
+  void set_note(midi_note n) noexcept { m.square_1().note() = {n}; }
 };
 
-int main() {
-  siaudio::streamer s{player{}};
+extern "C" auto *poc_start() {
+  static siaudio::streamer s{player{}};
+  return &s;
+}
+extern "C" bool poc_loop() {
+  auto &p = poc_start()->producer();
+  switch (p.current_note_index()) {
+  case 1:
+    p.set_note(E4);
+    return true;
+  case 3:
+    p.set_note(B3);
+    return true;
+  case 4:
+    p.set_note(C4);
+    return true;
+  case 5:
+    p.set_note(D4);
+    return true;
+  case 7:
+    p.set_note(C4);
+    return true;
+  case 8:
+    p.set_note(B3);
+    return true;
+  case 9:
+    p.set_note(A3);
+    return true;
+  case 11:
+    p.set_note(A3);
+    return true;
+  case 12:
+    p.set_note(C4);
+    return true;
+  case 13:
+    p.set_note(E4);
+    return true;
+  case 15:
+    p.set_note(D4);
+    return true;
+  case 16:
+    p.set_note(C4);
+    return true;
+  case 17:
+    p.set_note(B3);
+    return true;
+  case 18:
+    p.set_note(B3);
+    return true;
+  case 20:
+    p.set_note(C4);
+    return true;
+  case 22:
+    p.set_note(D4);
+    return true;
+  case 24:
+    p.set_note(E4);
+    return true;
+  case 26:
+    p.set_note(C4);
+    return true;
+  case 28:
+    p.set_note(A3);
+    return true;
+  case 30:
+    p.set_note(A3);
+    return true;
+  case 32:
+    return false;
+  default:
+    return true;
+  }
+}
 
-  auto &p = s.producer();
-  p.play(1, E4, DUR_2_4);
-  p.play(3, B3, DUR_1_4);
-  p.play(4, C4, DUR_1_4);
-  p.play(5, D4, DUR_2_4);
-  p.play(7, C4, DUR_1_4);
-  p.play(8, B3, DUR_1_4);
-  p.play(9, A3, DUR_2_4);
-  p.play(11, A3, DUR_1_4);
-  p.play(12, C4, DUR_1_4);
-  p.play(13, E4, DUR_2_4);
-  p.play(15, D4, DUR_1_4);
-  p.play(16, C4, DUR_1_4);
-  p.play(16, B3, DUR_1_4);
-  p.play(17, B3, DUR_2_4);
-  p.play(19, C4, DUR_1_4);
-  p.play(20, D4, DUR_2_4);
-  p.play(22, E4, DUR_2_4);
-  p.play(24, C4, DUR_2_4);
-  p.play(26, A3, DUR_2_4);
-  p.play(28, A3, DUR_2_4);
-  p.play(30, MUTE, DUR_2_4);
+int main() {
+  auto s = poc_start();
+  while (poc_loop()) {
+  }
 }
