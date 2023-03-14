@@ -3,7 +3,7 @@ export module nessa:gen;
 namespace nessa::gen {
 class freq_gen {
 protected:
-  float m_period;
+  float m_period{1};
 
   [[nodiscard]] constexpr float f(float t) const noexcept {
     auto n = t / m_period;
