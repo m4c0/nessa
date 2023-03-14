@@ -150,16 +150,18 @@ public:
 
 class mixer {
   sq1 m_sq1{};
-  nessa::gen::triangle m_tri1{};
+  nessa::gen::triangle m_tri{};
+  nessa::gen::noise m_noise{};
 
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
-    constexpr const auto volume = 0.25f;
-    return (m_sq1(t) + m_tri1(t)) * volume;
+    constexpr const auto volume = 0.125f;
+    return (m_sq1(t) + m_tri(t) + m_noise(t)) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
-  [[nodiscard]] constexpr auto &triangle_1() noexcept { return m_tri1; }
+  [[nodiscard]] constexpr auto &triangle() noexcept { return m_tri; }
+  [[nodiscard]] constexpr auto &noise() noexcept { return m_noise; }
 };
 
 class player {
@@ -196,10 +198,15 @@ public:
     m.square_1().set_ref_time(time(m_index));
     m.square_1().set_bps(bps);
   }
-  void set_tri1_note(midi_note n) noexcept {
+  void set_tri_note(midi_note n) noexcept {
     if (n == EXTEND)
       return;
-    m.triangle_1().set_freq(note_freqs[n - C0_MIDI_ID]);
+    m.triangle().set_freq(note_freqs[n - C0_MIDI_ID]);
+  }
+  void set_noise_note(midi_note n) noexcept {
+    if (n == EXTEND)
+      return;
+    m.noise().set_freq(note_freqs[n - C0_MIDI_ID]);
   }
 };
 
@@ -221,6 +228,12 @@ extern "C" bool poc_loop() {
       Ab2, Ab3, Ab2, Ab3, Ab2, Ab3, Ab2, Ab3, //
       A2,  A3,  A2,  A3,  A2,  A3,  A2,  A3,  //
   };
+  constexpr const midi_note inst_4[note_count] = {
+      MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
+      MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
+      MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
+      MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
+  };
   auto &p = poc_start()->producer();
   auto i = p.current_note_index();
   if (i >= note_count)
@@ -231,7 +244,8 @@ extern "C" bool poc_loop() {
     return true;
 
   p.set_sq1_note(inst_1[i]);
-  p.set_tri1_note((midi_note)(inst_3[i]));
+  p.set_tri_note((midi_note)(inst_3[i]));
+  p.set_noise_note(inst_4[i]);
   last_note = i;
 
   return true;
