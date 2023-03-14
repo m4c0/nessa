@@ -127,9 +127,30 @@ static constexpr const float note_freqs[] = {
 static constexpr const auto C0_MIDI_ID = 12;
 static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
+class sq1 : public nessa::gen::square {
+  float m_ref_t{};
+  float m_bps{};
+
+public:
+  using square::set_duty_cycle;
+  using square::set_freq;
+
+  void set_ref_time(float t) noexcept { m_ref_t = t; }
+  void set_bps(float bps) noexcept { m_bps = bps; }
+
+  [[nodiscard]] float operator()(float t) const noexcept {
+    float b = (t - m_ref_t) * m_bps;
+    if (b > 1.0f)
+      b = 1.0f;
+
+    float v = 0.9 - (b * 0.5) * 0.4;
+    return v * square::operator()(t);
+  }
+};
+
 class mixer {
-  nessa::gen::square m_sq1;
-  nessa::gen::triangle m_tri1;
+  sq1 m_sq1{};
+  nessa::gen::triangle m_tri1{};
 
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
@@ -142,6 +163,9 @@ public:
 };
 
 class player {
+  static constexpr const float bpm = 140.0;
+  static constexpr const float bps = bpm / 60.0;
+
   mixer m{};
   volatile unsigned m_index;
 
@@ -160,8 +184,6 @@ public:
   }
 
   [[nodiscard]] auto current_note_index() const noexcept {
-    constexpr const float bpm = 140.0;
-    constexpr const float bps = bpm / 60.0;
     constexpr const float notes_per_beat = 2;
     return static_cast<unsigned>(time(m_index) * bps * notes_per_beat);
   }
@@ -171,6 +193,8 @@ public:
       return;
     m.square_1().set_freq(note_freqs[n - C0_MIDI_ID]);
     m.square_1().set_duty_cycle(0.5);
+    m.square_1().set_ref_time(time(m_index));
+    m.square_1().set_bps(bps);
   }
   void set_tri1_note(midi_note n) noexcept {
     if (n == EXTEND)
@@ -202,8 +226,13 @@ extern "C" bool poc_loop() {
   if (i >= note_count)
     return false;
 
+  static int last_note = -1;
+  if (last_note == i)
+    return true;
+
   p.set_sq1_note(inst_1[i]);
   p.set_tri1_note((midi_note)(inst_3[i]));
+  last_note = i;
 
   return true;
 }
