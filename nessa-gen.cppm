@@ -42,7 +42,7 @@ public:
   [[nodiscard]] constexpr float operator()(float t) const noexcept {
     // auto idx = static_cast<unsigned>(f(t) * static_cast<float>(perlin_size));
     // return perlin[idx % perlin_size] > 0.5 ? -1.0 : 1.0;
-    return perlin[static_cast<unsigned>(t * m_freq * 2) % perlin_size] > 128
+    return perlin[static_cast<unsigned>(t * m_freq * 4) % perlin_size] > 128
                ? 1
                : -1;
   }

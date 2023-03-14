@@ -127,11 +127,14 @@ static constexpr const float note_freqs[] = {
 static constexpr const auto C0_MIDI_ID = 12;
 static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
-class sq1 : public nessa::gen::square {
+class sqr : public nessa::gen::square {
+  float m_base_vol{1};
   float m_ref_t{};
   float m_bps{};
 
 public:
+  sqr(float bv) : m_base_vol{bv} {}
+
   using square::set_duty_cycle;
   using square::set_freq;
 
@@ -139,27 +142,49 @@ public:
   void set_bps(float bps) noexcept { m_bps = bps; }
 
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = (t - m_ref_t) * m_bps;
+    float b = (t - m_ref_t) * m_bps * 2.0f;
     if (b > 1.0f)
       b = 1.0f;
 
-    float v = 0.9 - (b * 0.5) * 0.4;
-    return v * square::operator()(t);
+    float v = 0.9 - b * 0.4;
+    return m_base_vol * v * square::operator()(t);
+  }
+};
+
+class noise5 : public nessa::gen::noise {
+  float m_ref_t{};
+  float m_bps{};
+
+public:
+  using noise::set_freq;
+
+  void set_ref_time(float t) noexcept { m_ref_t = t; }
+  void set_bps(float bps) noexcept { m_bps = bps; }
+
+  [[nodiscard]] float operator()(float t) const noexcept {
+    float b = (t - m_ref_t) * m_bps * 8.0f;
+    if (b > 1.0f)
+      b = 1.0f;
+
+    float v = 1.0 - b;
+    return v * noise::operator()(t);
   }
 };
 
 class mixer {
-  sq1 m_sq1{};
+  sqr m_sq1{1.0};
+  sqr m_sq2{0.5};
   nessa::gen::triangle m_tri{};
-  nessa::gen::noise m_noise{};
+  noise5 m_noise{};
 
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
     constexpr const auto volume = 0.125f;
-    return (m_sq1(t) + m_tri(t) + m_noise(t)) * volume;
+    return (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
   }
 
   [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
+  [[nodiscard]] constexpr auto &square_2() noexcept { return m_sq2; }
   [[nodiscard]] constexpr auto &triangle() noexcept { return m_tri; }
   [[nodiscard]] constexpr auto &noise() noexcept { return m_noise; }
 };
@@ -198,6 +223,14 @@ public:
     m.square_1().set_ref_time(time(m_index));
     m.square_1().set_bps(bps);
   }
+  void set_sq2_note(midi_note n) noexcept {
+    if (n == EXTEND)
+      return;
+    m.square_2().set_freq(note_freqs[n - C0_MIDI_ID]);
+    m.square_2().set_duty_cycle(0.5);
+    m.square_2().set_ref_time(time(m_index));
+    m.square_2().set_bps(bps);
+  }
   void set_tri_note(midi_note n) noexcept {
     if (n == EXTEND)
       return;
@@ -207,6 +240,8 @@ public:
     if (n == EXTEND)
       return;
     m.noise().set_freq(note_freqs[n - C0_MIDI_ID]);
+    m.noise().set_ref_time(time(m_index));
+    m.noise().set_bps(bps);
   }
 };
 
@@ -221,6 +256,12 @@ extern "C" bool poc_loop() {
       A3, EXTEND, A3, C4,     E4, EXTEND, D4,   C4,     //
       B3, EXTEND, B3, C4,     D4, EXTEND, E4,   EXTEND, //
       C4, EXTEND, A3, EXTEND, A3, EXTEND, MUTE, MUTE,   //
+  };
+  constexpr const midi_note inst_2[note_count] = {
+      MUTE, MUTE,   Ab3,  MUTE, MUTE, MUTE,   A3,   Ab3,  //
+      E3,   EXTEND, MUTE, MUTE, MUTE, MUTE,   MUTE, MUTE, //
+      Ab3,  EXTEND, Ab3,  A3,   B3,   EXTEND, MUTE, MUTE, //
+      MUTE, MUTE,   MUTE, MUTE, MUTE, MUTE,   MUTE, MUTE, //
   };
   constexpr const midi_note inst_3[note_count] = {
       E3,  E4,  E3,  E4,  E3,  E4,  E3,  E4,  //
@@ -244,6 +285,7 @@ extern "C" bool poc_loop() {
     return true;
 
   p.set_sq1_note(inst_1[i]);
+  p.set_sq2_note(inst_2[i]);
   p.set_tri_note((midi_note)(inst_3[i]));
   p.set_noise_note(inst_4[i]);
   last_note = i;
