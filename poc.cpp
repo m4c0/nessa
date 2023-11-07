@@ -1,3 +1,4 @@
+#pragma leco app
 import nessa;
 import siaudio;
 
