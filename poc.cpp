@@ -244,6 +244,13 @@ public:
     m.noise().set_ref_time(time(m_index));
     m.noise().set_bps(bps);
   }
+
+  void set_notes(const midi_note (&n)[4]) noexcept {
+    set_sq1_note(n[0]);
+    set_sq2_note(n[1]);
+    set_tri_note(n[2]);
+    set_noise_note(n[3]);
+  }
 };
 
 extern "C" auto *poc_start() {
@@ -285,10 +292,12 @@ extern "C" bool poc_loop() {
   if (last_note == i)
     return true;
 
-  p.set_sq1_note(inst_1[i]);
-  p.set_sq2_note(inst_2[i]);
-  p.set_tri_note((midi_note)(inst_3[i]));
-  p.set_noise_note(inst_4[i]);
+  p.set_notes({
+      inst_1[i],
+      inst_2[i],
+      inst_3[i],
+      inst_4[i],
+  });
   last_note = i;
 
   return true;
