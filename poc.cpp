@@ -253,11 +253,7 @@ public:
   }
 };
 
-extern "C" auto *poc_start() {
-  static siaudio::streamer s{player{}};
-  return &s;
-}
-extern "C" bool poc_loop() {
+bool play_note(auto &p) {
   constexpr const auto note_count = 32;
   constexpr const midi_note inst_1[note_count] = {
       E4, EXTEND, B3, C4,     D4, EXTEND, C4,   B3,     //
@@ -283,14 +279,9 @@ extern "C" bool poc_loop() {
       MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
       MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
   };
-  auto &p = poc_start()->producer();
   auto i = p.current_note_index();
   if (i >= note_count)
     return false;
-
-  static int last_note = -1;
-  if (last_note == i)
-    return true;
 
   p.set_notes({
       inst_1[i],
@@ -298,13 +289,23 @@ extern "C" bool poc_loop() {
       inst_3[i],
       inst_4[i],
   });
-  last_note = i;
 
   return true;
 }
 
 int main() {
-  auto s = poc_start();
-  while (poc_loop()) {
+  static siaudio::streamer s{player{}};
+
+  int last_note = -1;
+  auto &p = s.producer();
+  while (true) {
+    auto i = p.current_note_index();
+    if (last_note == i)
+      continue;
+
+    if (!play_note(p))
+      break;
+
+    last_note = i;
   }
 }
