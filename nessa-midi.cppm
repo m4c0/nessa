@@ -255,5 +255,8 @@ public:
   }
 };
 
-export [[nodiscard]] auto streamer() { return siaudio::streamer{player{}}; }
+export class streamer : public siaudio::streamer<player> {
+public:
+  streamer() : siaudio::streamer<player>{player{}} {}
+};
 } // namespace nessa::midi
