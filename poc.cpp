@@ -49,29 +49,15 @@ public:
   }
 };
 
-class mixer {
-  sqr m_sq1{1.0};
-  sqr m_sq2{0.5};
-  gen::triangle m_tri{};
-  noise5 m_noise{};
-
-public:
-  [[nodiscard]] float operator()(float t) const noexcept {
-    constexpr const auto volume = 0.125f;
-    return (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
-  }
-
-  [[nodiscard]] constexpr auto &square_1() noexcept { return m_sq1; }
-  [[nodiscard]] constexpr auto &square_2() noexcept { return m_sq2; }
-  [[nodiscard]] constexpr auto &triangle() noexcept { return m_tri; }
-  [[nodiscard]] constexpr auto &noise() noexcept { return m_noise; }
-};
 class player {
   // TODO: move beat count out
   static constexpr const float bpm = 140.0;
   static constexpr const float bps = bpm / 60.0;
 
-  mixer m{};
+  sqr m_sq1{1.0};
+  sqr m_sq2{0.5};
+  gen::triangle m_tri{};
+  noise5 m_noise{};
   volatile unsigned m_index;
 
   [[nodiscard]] float time(unsigned idx) const noexcept {
@@ -81,9 +67,13 @@ class player {
 
 public:
   void operator()(float *buf, unsigned len) {
+    constexpr const auto volume = 0.125f;
+
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
-      *buf++ = m(time(idx));
+      float t = time(idx);
+      float v = (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
+      *buf++ = v;
     }
     m_index = idx;
   }
@@ -91,30 +81,30 @@ public:
   void set_sq1_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
-    m.square_1().set_freq(midi::note_freq(n));
-    m.square_1().set_duty_cycle(0.5);
-    m.square_1().set_ref_time(time(m_index));
-    m.square_1().set_bps(bps);
+    m_sq1.set_freq(midi::note_freq(n));
+    m_sq1.set_duty_cycle(0.5);
+    m_sq1.set_ref_time(time(m_index));
+    m_sq1.set_bps(bps);
   }
   void set_sq2_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
-    m.square_2().set_freq(midi::note_freq(n));
-    m.square_2().set_duty_cycle(0.5);
-    m.square_2().set_ref_time(time(m_index));
-    m.square_2().set_bps(bps);
+    m_sq2.set_freq(midi::note_freq(n));
+    m_sq2.set_duty_cycle(0.5);
+    m_sq2.set_ref_time(time(m_index));
+    m_sq2.set_bps(bps);
   }
   void set_tri_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
-    m.triangle().set_freq(midi::note_freq(n));
+    m_tri.set_freq(midi::note_freq(n));
   }
   void set_noise_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
-    m.noise().set_freq(midi::note_freq(n));
-    m.noise().set_ref_time(time(m_index));
-    m.noise().set_bps(bps);
+    m_noise.set_freq(midi::note_freq(n));
+    m_noise.set_ref_time(time(m_index));
+    m_noise.set_bps(bps);
   }
 
   void set_notes(const midi::note (&n)[4]) noexcept {
