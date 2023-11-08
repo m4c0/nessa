@@ -38,13 +38,6 @@ class thread : sith::thread {
       MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
   };
 
-  streamer m_streamer{};
-
-  void play(midi_note s1, midi_note s2, midi_note sq, midi_note n) {
-    m_streamer.producer().set_notes({s1, s2, sq, n});
-    sitime::sleep_ms(ms_per_note);
-  }
-
 public:
   using sith::thread::start;
 
@@ -52,14 +45,18 @@ public:
 };
 
 void thread::run() {
+  streamer s{};
   for (auto i = 0; i < note_count; i++) {
-    play(inst_1[i], inst_2[i], inst_3[i], inst_4[i]);
+    s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
+    sitime::sleep_ms(ms_per_note);
   }
-  play(MUTE, MUTE, MUTE, MUTE);
 }
 int main() {
   thread t{};
   t.start();
 
-  sitime::sleep(10);
+  // Give the thread some time for proper startup. Then, it's a matter of
+  // joining it. Since we don't check for interruptions in the thread itself,
+  // this will exit right at the end of the song
+  sitime::sleep(1);
 }
