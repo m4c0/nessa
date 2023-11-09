@@ -60,19 +60,6 @@ class player {
     return static_cast<float>(idx) / frate;
   }
 
-public:
-  void operator()(float *buf, unsigned len) {
-    constexpr const auto volume = 0.125f;
-
-    auto idx = m_index;
-    for (auto i = 0; i < len; ++i, ++idx) {
-      float t = time(idx);
-      float v = (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
-      *buf++ = v;
-    }
-    m_index = idx;
-  }
-
   void set_sq1_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
@@ -97,6 +84,19 @@ public:
       return;
     m_noise.set_freq(midi::note_freq(n));
     m_noise.set_ref_time(time(m_index));
+  }
+
+public:
+  void operator()(float *buf, unsigned len) {
+    constexpr const auto volume = 0.125f;
+
+    auto idx = m_index;
+    for (auto i = 0; i < len; ++i, ++idx) {
+      float t = time(idx);
+      float v = (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
+      *buf++ = v;
+    }
+    m_index = idx;
   }
 
   void set_notes(const midi::note (&n)[4]) noexcept {
