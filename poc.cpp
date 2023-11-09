@@ -31,9 +31,15 @@ public:
     return m_base_vol * v * m_gen(t);
   }
 };
-class noise5 : public gen::noise {
+class noise5 {
+  gen::noise m_gen{};
+
 public:
-  using noise::set_freq;
+  void set_note(midi::note n) {
+    if (n == midi::EXTEND)
+      return;
+    m_gen.set_freq(midi::note_freq(n));
+  }
 
   [[nodiscard]] float operator()(float t) const noexcept {
     float b = t * bps * 8.0f;
@@ -41,7 +47,7 @@ public:
       b = 1.0f;
 
     float v = 1.0 - b;
-    return v * noise::operator()(t);
+    return v * m_gen(t);
   }
 };
 
@@ -66,11 +72,7 @@ class player {
       return;
     m_tri.set_freq(midi::note_freq(n));
   }
-  void set_noise_note(midi::note n) noexcept {
-    if (n == midi::EXTEND)
-      return;
-    m_noise.set_freq(midi::note_freq(n));
-  }
+  void set_noise_note(midi::note n) noexcept { m_noise.set_note(n); }
 
 public:
   void operator()(float *buf, unsigned len) {
