@@ -11,7 +11,6 @@ static constexpr const float bps = bpm / 60.0;
 
 class sqr : public gen::square {
   float m_base_vol{1};
-  float m_ref_t{};
 
 public:
   sqr(float bv) : m_base_vol{bv} {}
@@ -19,10 +18,8 @@ public:
   using square::set_duty_cycle;
   using square::set_freq;
 
-  void set_ref_time(float t) noexcept { m_ref_t = t; }
-
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = (t - m_ref_t) * bps * 2.0f;
+    float b = t * bps * 2.0f;
     if (b > 1.0f)
       b = 1.0f;
 
@@ -31,15 +28,11 @@ public:
   }
 };
 class noise5 : public gen::noise {
-  float m_ref_t{};
-
 public:
   using noise::set_freq;
 
-  void set_ref_time(float t) noexcept { m_ref_t = t; }
-
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = (t - m_ref_t) * bps * 8.0f;
+    float b = t * bps * 8.0f;
     if (b > 1.0f)
       b = 1.0f;
 
@@ -55,6 +48,8 @@ class player {
   noise5 m_noise{};
   volatile unsigned m_index;
 
+  float m_ref_t{};
+
   [[nodiscard]] float time(unsigned idx) const noexcept {
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
     return static_cast<float>(idx) / frate;
@@ -65,14 +60,12 @@ class player {
       return;
     m_sq1.set_freq(midi::note_freq(n));
     m_sq1.set_duty_cycle(0.5);
-    m_sq1.set_ref_time(time(m_index));
   }
   void set_sq2_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
     m_sq2.set_freq(midi::note_freq(n));
     m_sq2.set_duty_cycle(0.5);
-    m_sq2.set_ref_time(time(m_index));
   }
   void set_tri_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
@@ -83,7 +76,6 @@ class player {
     if (n == midi::EXTEND)
       return;
     m_noise.set_freq(midi::note_freq(n));
-    m_noise.set_ref_time(time(m_index));
   }
 
 public:
@@ -92,7 +84,7 @@ public:
 
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
-      float t = time(idx);
+      float t = time(idx) - m_ref_t;
       float v = (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
       *buf++ = v;
     }
@@ -104,6 +96,8 @@ public:
     set_sq2_note(n[1]);
     set_tri_note(n[2]);
     set_noise_note(n[3]);
+
+    m_ref_t = time(m_index);
   }
 };
 
