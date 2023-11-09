@@ -11,15 +11,15 @@ static constexpr const float bps = bpm / 60.0;
 
 static constexpr auto clamp(float b) { return b > 1.0f ? 1.0 : b; }
 
-static constexpr auto sqr(float t, float f) noexcept {
-  float b = clamp(t * bps * 2.0f);
+static constexpr auto sqr(float t_b, float t_f) noexcept {
+  float b = clamp(t_b * 2.0f);
   float v = 0.9 - b * 0.4;
-  return v * gen::square(t * f);
+  return v * gen::square(t_f);
 }
-static constexpr auto noise(float t, float f) noexcept {
-  float b = clamp(t * bps * 8.0f);
+static constexpr auto noise(float t_b, float t_f) noexcept {
+  float b = clamp(t_b * 8.0f);
   float v = 1.0 - b;
-  return v * gen::noise(t * f);
+  return v * gen::noise(t_f);
 }
 
 class player {
@@ -39,11 +39,12 @@ public:
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
       float t = time(idx) - m_ref_t;
+      float t_b = t * bps;
 
-      float vsq1 = 1.0 * sqr(t, m_note_freqs[0]);
-      float vsq2 = 0.5 * sqr(t, m_note_freqs[1]);
+      float vsq1 = 1.0 * sqr(t_b, t * m_note_freqs[0]);
+      float vsq2 = 0.5 * sqr(t_b, t * m_note_freqs[1]);
       float vtri = gen::triangle(t * m_note_freqs[2]);
-      float vnoi = noise(t, m_note_freqs[3]);
+      float vnoi = noise(t_b, t * m_note_freqs[3]);
 
       float v = (vsq1 + vsq2 + vtri + vnoi) * volume;
       *buf++ = v;
