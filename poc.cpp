@@ -6,10 +6,12 @@ import sitime;
 
 using namespace nessa;
 
+static constexpr const float bpm = 140.0;
+static constexpr const float bps = bpm / 60.0;
+
 class sqr : public gen::square {
   float m_base_vol{1};
   float m_ref_t{};
-  float m_bps{};
 
 public:
   sqr(float bv) : m_base_vol{bv} {}
@@ -18,10 +20,9 @@ public:
   using square::set_freq;
 
   void set_ref_time(float t) noexcept { m_ref_t = t; }
-  void set_bps(float bps) noexcept { m_bps = bps; }
 
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = (t - m_ref_t) * m_bps * 2.0f;
+    float b = (t - m_ref_t) * bps * 2.0f;
     if (b > 1.0f)
       b = 1.0f;
 
@@ -31,16 +32,14 @@ public:
 };
 class noise5 : public gen::noise {
   float m_ref_t{};
-  float m_bps{};
 
 public:
   using noise::set_freq;
 
   void set_ref_time(float t) noexcept { m_ref_t = t; }
-  void set_bps(float bps) noexcept { m_bps = bps; }
 
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = (t - m_ref_t) * m_bps * 8.0f;
+    float b = (t - m_ref_t) * bps * 8.0f;
     if (b > 1.0f)
       b = 1.0f;
 
@@ -50,10 +49,6 @@ public:
 };
 
 class player {
-  // TODO: move beat count out
-  static constexpr const float bpm = 140.0;
-  static constexpr const float bps = bpm / 60.0;
-
   sqr m_sq1{1.0};
   sqr m_sq2{0.5};
   gen::triangle m_tri{};
@@ -84,7 +79,6 @@ public:
     m_sq1.set_freq(midi::note_freq(n));
     m_sq1.set_duty_cycle(0.5);
     m_sq1.set_ref_time(time(m_index));
-    m_sq1.set_bps(bps);
   }
   void set_sq2_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
@@ -92,7 +86,6 @@ public:
     m_sq2.set_freq(midi::note_freq(n));
     m_sq2.set_duty_cycle(0.5);
     m_sq2.set_ref_time(time(m_index));
-    m_sq2.set_bps(bps);
   }
   void set_tri_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
@@ -104,7 +97,6 @@ public:
       return;
     m_noise.set_freq(midi::note_freq(n));
     m_noise.set_ref_time(time(m_index));
-    m_noise.set_bps(bps);
   }
 
   void set_notes(const midi::note (&n)[4]) noexcept {
