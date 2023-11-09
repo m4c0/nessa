@@ -11,19 +11,19 @@ static constexpr const float bps = bpm / 60.0;
 
 static constexpr auto clamp(float b) { return b > 1.0f ? 1.0 : b; }
 
-static constexpr auto sqr(midi::note n, float t) noexcept {
+static constexpr auto sqr(float t, float f) noexcept {
   float b = clamp(t * bps * 2.0f);
   float v = 0.9 - b * 0.4;
-  return v * gen::square(t * midi::note_freq(n));
+  return v * gen::square(t * f);
 }
-static constexpr auto noise(midi::note n, float t) noexcept {
+static constexpr auto noise(float t, float f) noexcept {
   float b = clamp(t * bps * 8.0f);
   float v = 1.0 - b;
-  return v * gen::noise(t * midi::note_freq(n));
+  return v * gen::noise(t * f);
 }
 
 class player {
-  midi::note m_notes[4];
+  float m_note_freqs[4];
   float m_ref_t{};
   volatile unsigned m_index;
 
@@ -40,10 +40,10 @@ public:
     for (auto i = 0; i < len; ++i, ++idx) {
       float t = time(idx) - m_ref_t;
 
-      float vsq1 = 1.0 * sqr(m_notes[0], t);
-      float vsq2 = 0.5 * sqr(m_notes[1], t);
-      float vtri = gen::triangle(t * midi::note_freq(m_notes[2]));
-      float vnoi = noise(m_notes[3], t);
+      float vsq1 = 1.0 * sqr(t, m_note_freqs[0]);
+      float vsq2 = 0.5 * sqr(t, m_note_freqs[1]);
+      float vtri = gen::triangle(t * m_note_freqs[2]);
+      float vnoi = noise(t, m_note_freqs[3]);
 
       float v = (vsq1 + vsq2 + vtri + vnoi) * volume;
       *buf++ = v;
@@ -54,7 +54,7 @@ public:
   void set_notes(const midi::note (&n)[4]) noexcept {
     for (auto i = 0; i < 4; i++) {
       if (n[i] != midi::EXTEND)
-        m_notes[i] = n[i];
+        m_note_freqs[i] = midi::note_freq(n[i]);
     }
     m_ref_t = time(m_index);
   }
