@@ -13,9 +13,8 @@ class sqr : public gen::square {
   float m_base_vol{1};
 
 public:
-  sqr(float bv) : m_base_vol{bv} {}
+  sqr(float bv) : m_base_vol{bv} { set_duty_cycle(0.5); }
 
-  using square::set_duty_cycle;
   using square::set_freq;
 
   [[nodiscard]] float operator()(float t) const noexcept {
@@ -59,13 +58,11 @@ class player {
     if (n == midi::EXTEND)
       return;
     m_sq1.set_freq(midi::note_freq(n));
-    m_sq1.set_duty_cycle(0.5);
   }
   void set_sq2_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
     m_sq2.set_freq(midi::note_freq(n));
-    m_sq2.set_duty_cycle(0.5);
   }
   void set_tri_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
