@@ -130,18 +130,4 @@ static constexpr const auto C0_MIDI_ID = 12;
 static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
 export float note_freq(note n) { return note_freqs[n - C0_MIDI_ID]; }
-
-export template <typename Gen> class gen {
-protected:
-  Gen m_gen{};
-
-public:
-  void set_note(midi::note n) {
-    if (n == midi::EXTEND)
-      return;
-    m_gen.set_freq(midi::note_freq(n));
-  }
-
-  [[nodiscard]] float operator()(float t) const noexcept { return m_gen(t); }
-};
 } // namespace nessa::midi

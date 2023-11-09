@@ -11,31 +11,21 @@ static constexpr const float bps = bpm / 60.0;
 
 static constexpr auto clamp(float b) { return b > 1.0f ? 1.0 : b; }
 
-class sqr : public midi::gen<gen::square> {
-public:
-  [[nodiscard]] float operator()(float t) const noexcept {
-    float b = clamp(t * bps * 2.0f);
-    float v = 0.9 - b * 0.4;
-    return v * m_gen(t);
-  }
-};
-class noise5 : public midi::gen<gen::noise> {
-public:
-  [[nodiscard]] float operator()(float t) const noexcept {
-    float b = clamp(t * bps * 8.0f);
-    float v = 1.0 - b;
-    return v * m_gen(t);
-  }
-};
+static constexpr auto sqr(midi::note n, float t) noexcept {
+  float b = clamp(t * bps * 2.0f);
+  float v = 0.9 - b * 0.4;
+  return v * gen::square(t * midi::note_freq(n));
+}
+static constexpr auto noise(midi::note n, float t) noexcept {
+  float b = clamp(t * bps * 8.0f);
+  float v = 1.0 - b;
+  return v * gen::noise(t * midi::note_freq(n));
+}
 
 class player {
-  sqr m_sq1{};
-  sqr m_sq2{};
-  midi::gen<gen::triangle> m_tri{};
-  noise5 m_noise{};
-  volatile unsigned m_index;
-
+  midi::note m_notes[4];
   float m_ref_t{};
+  volatile unsigned m_index;
 
   [[nodiscard]] float time(unsigned idx) const noexcept {
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
@@ -50,21 +40,22 @@ public:
     for (auto i = 0; i < len; ++i, ++idx) {
       float t = time(idx) - m_ref_t;
 
-      float vsq1 = 1.0 * m_sq1(t);
-      float vsq2 = 0.5 * m_sq1(t);
+      float vsq1 = 1.0 * sqr(m_notes[0], t);
+      float vsq2 = 0.5 * sqr(m_notes[1], t);
+      float vtri = gen::triangle(t * midi::note_freq(m_notes[2]));
+      float vnoi = noise(m_notes[3], t);
 
-      float v = (vsq1 + vsq2 + m_tri(t) + m_noise(t)) * volume;
+      float v = (vsq1 + vsq2 + vtri + vnoi) * volume;
       *buf++ = v;
     }
     m_index = idx;
   }
 
   void set_notes(const midi::note (&n)[4]) noexcept {
-    m_sq1.set_note(n[0]);
-    m_sq2.set_note(n[1]);
-    m_tri.set_note(n[2]);
-    m_noise.set_note(n[3]);
-
+    for (auto i = 0; i < 4; i++) {
+      if (n[i] != midi::EXTEND)
+        m_notes[i] = n[i];
+    }
     m_ref_t = time(m_index);
   }
 };
