@@ -9,21 +9,7 @@ using namespace nessa;
 static constexpr const float bpm = 140.0;
 static constexpr const float bps = bpm / 60.0;
 
-template <typename Gen> class jenny {
-protected:
-  Gen m_gen{};
-
-public:
-  void set_note(midi::note n) {
-    if (n == midi::EXTEND)
-      return;
-    m_gen.set_freq(midi::note_freq(n));
-  }
-
-  [[nodiscard]] float operator()(float t) const noexcept { return m_gen(t); }
-};
-
-class sqr : public jenny<gen::square> {
+class sqr : public midi::gen<gen::square> {
   float m_base_vol{1};
 
 public:
@@ -38,7 +24,7 @@ public:
     return m_base_vol * v * m_gen(t);
   }
 };
-class noise5 : public jenny<gen::noise> {
+class noise5 : public midi::gen<gen::noise> {
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
     float b = t * bps * 8.0f;
@@ -53,7 +39,7 @@ public:
 class player {
   sqr m_sq1{1.0};
   sqr m_sq2{0.5};
-  jenny<gen::triangle> m_tri{};
+  midi::gen<gen::triangle> m_tri{};
   noise5 m_noise{};
   volatile unsigned m_index;
 
