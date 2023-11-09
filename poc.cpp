@@ -10,10 +10,8 @@ static constexpr const float bpm = 140.0;
 static constexpr const float bps = bpm / 60.0;
 
 class sqr : public midi::gen<gen::square> {
-  float m_base_vol{1};
-
 public:
-  sqr(float bv) : m_base_vol{bv} { m_gen.set_duty_cycle(0.5); }
+  sqr() { m_gen.set_duty_cycle(0.5); }
 
   [[nodiscard]] float operator()(float t) const noexcept {
     float b = t * bps * 2.0f;
@@ -21,7 +19,7 @@ public:
       b = 1.0f;
 
     float v = 0.9 - b * 0.4;
-    return m_base_vol * v * m_gen(t);
+    return v * m_gen(t);
   }
 };
 class noise5 : public midi::gen<gen::noise> {
@@ -37,8 +35,8 @@ public:
 };
 
 class player {
-  sqr m_sq1{1.0};
-  sqr m_sq2{0.5};
+  sqr m_sq1{};
+  sqr m_sq2{};
   midi::gen<gen::triangle> m_tri{};
   noise5 m_noise{};
   volatile unsigned m_index;
@@ -57,7 +55,11 @@ public:
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
       float t = time(idx) - m_ref_t;
-      float v = (m_sq1(t) + m_sq2(t) + m_tri(t) + m_noise(t)) * volume;
+
+      float vsq1 = 1.0 * m_sq1(t);
+      float vsq2 = 0.5 * m_sq1(t);
+
+      float v = (vsq1 + vsq2 + m_tri(t) + m_noise(t)) * volume;
       *buf++ = v;
     }
     m_index = idx;
