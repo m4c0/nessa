@@ -9,13 +9,18 @@ using namespace nessa;
 static constexpr const float bpm = 140.0;
 static constexpr const float bps = bpm / 60.0;
 
-class sqr : public gen::square {
+class sqr {
+  gen::square m_gen{};
   float m_base_vol{1};
 
 public:
-  sqr(float bv) : m_base_vol{bv} { set_duty_cycle(0.5); }
+  sqr(float bv) : m_base_vol{bv} { m_gen.set_duty_cycle(0.5); }
 
-  using square::set_freq;
+  void set_note(midi::note n) {
+    if (n == midi::EXTEND)
+      return;
+    m_gen.set_freq(midi::note_freq(n));
+  }
 
   [[nodiscard]] float operator()(float t) const noexcept {
     float b = t * bps * 2.0f;
@@ -23,7 +28,7 @@ public:
       b = 1.0f;
 
     float v = 0.9 - b * 0.4;
-    return m_base_vol * v * square::operator()(t);
+    return m_base_vol * v * m_gen(t);
   }
 };
 class noise5 : public gen::noise {
@@ -54,16 +59,8 @@ class player {
     return static_cast<float>(idx) / frate;
   }
 
-  void set_sq1_note(midi::note n) noexcept {
-    if (n == midi::EXTEND)
-      return;
-    m_sq1.set_freq(midi::note_freq(n));
-  }
-  void set_sq2_note(midi::note n) noexcept {
-    if (n == midi::EXTEND)
-      return;
-    m_sq2.set_freq(midi::note_freq(n));
-  }
+  void set_sq1_note(midi::note n) noexcept { m_sq1.set_note(n); }
+  void set_sq2_note(midi::note n) noexcept { m_sq2.set_note(n); }
   void set_tri_note(midi::note n) noexcept {
     if (n == midi::EXTEND)
       return;
