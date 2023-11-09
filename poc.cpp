@@ -9,15 +9,12 @@ using namespace nessa;
 static constexpr const float bpm = 140.0;
 static constexpr const float bps = bpm / 60.0;
 
+static constexpr auto clamp(float b) { return b > 1.0f ? 1.0 : b; }
+
 class sqr : public midi::gen<gen::square> {
 public:
-  sqr() { m_gen.set_duty_cycle(0.5); }
-
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = t * bps * 2.0f;
-    if (b > 1.0f)
-      b = 1.0f;
-
+    float b = clamp(t * bps * 2.0f);
     float v = 0.9 - b * 0.4;
     return v * m_gen(t);
   }
@@ -25,10 +22,7 @@ public:
 class noise5 : public midi::gen<gen::noise> {
 public:
   [[nodiscard]] float operator()(float t) const noexcept {
-    float b = t * bps * 8.0f;
-    if (b > 1.0f)
-      b = 1.0f;
-
+    float b = clamp(t * bps * 8.0f);
     float v = 1.0 - b;
     return v * m_gen(t);
   }
