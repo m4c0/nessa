@@ -25,27 +25,29 @@ class player {
   float m_ref_t{};
   volatile unsigned m_index;
 
-  [[nodiscard]] float time(unsigned idx) const noexcept {
+  [[nodiscard]] constexpr float time(unsigned idx) const noexcept {
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
     return static_cast<float>(idx) / frate;
   }
 
-public:
-  void operator()(float *buf, unsigned len) {
+  constexpr float vol_at(float t) const noexcept {
     constexpr const auto volume = 0.125f;
 
+    float t_b = t * bps;
+
+    float vsq1 = 1.0 * sqr_env(t_b) * gen::square(t * m_note_freqs[0]);
+    float vsq2 = 0.5 * sqr_env(t_b) * gen::square(t * m_note_freqs[1]);
+    float vtri = gen::triangle(t * m_note_freqs[2]);
+    float vnoi = noise_env(t_b) * gen::noise(t * m_note_freqs[3]);
+
+    return (vsq1 + vsq2 + vtri + vnoi) * volume;
+  }
+
+public:
+  void operator()(float *buf, unsigned len) {
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
-      float t = time(idx) - m_ref_t;
-      float t_b = t * bps;
-
-      float vsq1 = 1.0 * sqr_env(t_b) * gen::square(t * m_note_freqs[0]);
-      float vsq2 = 0.5 * sqr_env(t_b) * gen::square(t * m_note_freqs[1]);
-      float vtri = gen::triangle(t * m_note_freqs[2]);
-      float vnoi = noise_env(t_b) * gen::noise(t * m_note_freqs[3]);
-
-      float v = (vsq1 + vsq2 + vtri + vnoi) * volume;
-      *buf++ = v;
+      *buf++ = vol_at(time(idx) - m_ref_t);
     }
     m_index = idx;
   }
