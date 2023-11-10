@@ -59,11 +59,6 @@ public:
   }
 };
 
-class streamer : public siaudio::streamer<player> {
-public:
-  streamer() : siaudio::streamer<player>{player{}} {}
-};
-
 using namespace nessa::midi;
 class thread : sith::thread {
   static constexpr const auto bpm = 140.0;
@@ -100,16 +95,15 @@ class thread : sith::thread {
 public:
   using sith::thread::start;
 
-  void run();
+  void run() {
+    auto s = siaudio::streamer{player{}};
+    for (auto i = 0; i < note_count; i++) {
+      s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
+      sitime::sleep_ms(ms_per_note);
+    }
+  }
 };
 
-void thread::run() {
-  streamer s{};
-  for (auto i = 0; i < note_count; i++) {
-    s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
-    sitime::sleep_ms(ms_per_note);
-  }
-}
 int main() {
   thread t{};
   t.start();
