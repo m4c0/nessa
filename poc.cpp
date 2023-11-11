@@ -17,6 +17,7 @@ static constexpr auto noise_env(float t_b) noexcept {
   return 1.0 - b;
 }
 
+namespace nessa::midi {
 class player : siaudio::os_streamer {
   float m_note_freqs[4];
   float m_bps;
@@ -28,18 +29,13 @@ class player : siaudio::os_streamer {
     return static_cast<float>(idx) / frate;
   }
 
-  constexpr float vol_at(float t) const noexcept {
-    constexpr const auto volume = 0.125f;
-
-    float t_b = t * m_bps;
-
-    float vsq1 = 1.0 * sqr_env(t_b) * gen::square(t * m_note_freqs[0]);
-    float vsq2 = 0.5 * sqr_env(t_b) * gen::square(t * m_note_freqs[1]);
-    float vtri = gen::triangle(t * m_note_freqs[2]);
-    float vnoi = noise_env(t_b) * gen::noise(t * m_note_freqs[3]);
-
-    return (vsq1 + vsq2 + vtri + vnoi) * volume;
+protected:
+  constexpr auto bps() const noexcept { return m_bps; }
+  constexpr auto note_freq(unsigned i) const noexcept {
+    return m_note_freqs[i];
   }
+
+  virtual constexpr float vol_at(float t) const noexcept = 0;
 
 public:
   void set_bpm(float bpm) { m_bps = bpm / 60.0; }
@@ -63,6 +59,7 @@ public:
     sitime::sleep_ms(ms_per_note);
   }
 };
+} // namespace nessa::midi
 
 using namespace nessa::midi;
 static constexpr const auto note_count = 32;
@@ -91,8 +88,24 @@ static constexpr const midi::note inst_4[note_count] = {
     MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
 };
 
+class player : public midi::player {
+protected:
+  constexpr float vol_at(float t) const noexcept override {
+    constexpr const auto volume = 0.125f;
+
+    float t_b = t * bps();
+
+    float vsq1 = 1.0 * sqr_env(t_b) * gen::square(t * note_freq(0));
+    float vsq2 = 0.5 * sqr_env(t_b) * gen::square(t * note_freq(1));
+    float vtri = gen::triangle(t * note_freq(2));
+    float vnoi = noise_env(t_b) * gen::noise(t * note_freq(3));
+
+    return (vsq1 + vsq2 + vtri + vnoi) * volume;
+  }
+};
+
 void play(auto) {
-  player p{};
+  ::player p{};
   p.set_bpm(140);
   for (auto i = 0; i < note_count; i++) {
     p.play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
