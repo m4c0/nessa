@@ -6,9 +6,6 @@ import sitime;
 
 using namespace nessa;
 
-static constexpr const float bpm = 140.0;
-static constexpr const float bps = bpm / 60.0;
-
 static constexpr auto clamp(float b) { return b > 1.0f ? 1.0 : b; }
 
 static constexpr auto sqr_env(float t_b) noexcept {
@@ -22,6 +19,7 @@ static constexpr auto noise_env(float t_b) noexcept {
 
 class player : siaudio::os_streamer {
   float m_note_freqs[4];
+  float m_bps;
   float m_ref_t{};
   volatile unsigned m_index;
 
@@ -33,7 +31,7 @@ class player : siaudio::os_streamer {
   constexpr float vol_at(float t) const noexcept {
     constexpr const auto volume = 0.125f;
 
-    float t_b = t * bps;
+    float t_b = t * m_bps;
 
     float vsq1 = 1.0 * sqr_env(t_b) * gen::square(t * m_note_freqs[0]);
     float vsq2 = 0.5 * sqr_env(t_b) * gen::square(t * m_note_freqs[1]);
@@ -44,6 +42,7 @@ class player : siaudio::os_streamer {
   }
 
 public:
+  void set_bpm(float bpm) { m_bps = bpm / 60.0; }
   void fill_buffer(float *buf, unsigned len) override {
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
@@ -53,14 +52,14 @@ public:
   }
 
   void play_notes(const midi::note (&n)[4]) noexcept {
-    static constexpr const auto notes_per_beat = 2.0;
-    static constexpr const auto ms_per_note = 1000.0 / (bps * notes_per_beat);
-
     for (auto i = 0; i < 4; i++) {
       if (n[i] != midi::EXTEND)
         m_note_freqs[i] = midi::note_freq(n[i]);
     }
     m_ref_t = time(m_index);
+
+    static constexpr const auto notes_per_beat = 2.0;
+    const auto ms_per_note = 1000.0 / (m_bps * notes_per_beat);
     sitime::sleep_ms(ms_per_note);
   }
 };
@@ -94,6 +93,7 @@ static constexpr const midi::note inst_4[note_count] = {
 
 void play(auto) {
   player p{};
+  p.set_bpm(140);
   for (auto i = 0; i < note_count; i++) {
     p.play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
   }
