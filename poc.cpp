@@ -52,19 +52,20 @@ public:
     m_index = idx;
   }
 
-  void set_notes(const midi::note (&n)[4]) noexcept {
+  void play_notes(const midi::note (&n)[4]) noexcept {
+    static constexpr const auto notes_per_beat = 2.0;
+    static constexpr const auto ms_per_note = 1000.0 / (bps * notes_per_beat);
+
     for (auto i = 0; i < 4; i++) {
       if (n[i] != midi::EXTEND)
         m_note_freqs[i] = midi::note_freq(n[i]);
     }
     m_ref_t = time(m_index);
+    sitime::sleep_ms(ms_per_note);
   }
 };
 
 using namespace nessa::midi;
-static constexpr const auto notes_per_beat = 2.0;
-static constexpr const auto ms_per_note = 1000.0 / (bps * notes_per_beat);
-
 static constexpr const auto note_count = 32;
 static constexpr const midi::note inst_1[note_count] = {
     E4, EXTEND, B3, C4,     D4, EXTEND, C4,   B3,     //
@@ -94,8 +95,7 @@ static constexpr const midi::note inst_4[note_count] = {
 void play(auto) {
   auto s = siaudio::streamer{player{}};
   for (auto i = 0; i < note_count; i++) {
-    s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
-    sitime::sleep_ms(ms_per_note);
+    s.producer().play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
   }
 }
 
