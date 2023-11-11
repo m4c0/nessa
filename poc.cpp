@@ -91,7 +91,7 @@ static constexpr const midi::note inst_4[note_count] = {
     MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
 };
 
-void play() {
+void play(auto) {
   auto s = siaudio::streamer{player{}};
   for (auto i = 0; i < note_count; i++) {
     s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
