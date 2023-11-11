@@ -91,21 +91,16 @@ static constexpr const midi::note inst_4[note_count] = {
     MUTE, C5, MUTE, C5, MUTE, C5, MUTE, C5, //
 };
 
-class thread : sith::thread {
-public:
-  using sith::thread::start;
-
-  void run() {
-    auto s = siaudio::streamer{player{}};
-    for (auto i = 0; i < note_count; i++) {
-      s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
-      sitime::sleep_ms(ms_per_note);
-    }
+void play() {
+  auto s = siaudio::streamer{player{}};
+  for (auto i = 0; i < note_count; i++) {
+    s.producer().set_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
+    sitime::sleep_ms(ms_per_note);
   }
-};
+}
 
 int main() {
-  thread t{};
+  sith::stateless_thread t{play};
   t.start();
 
   // Give the thread some time for proper startup. Then, it's a matter of
