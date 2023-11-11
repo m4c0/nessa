@@ -17,50 +17,6 @@ static constexpr auto noise_env(float t_b) noexcept {
   return 1.0 - b;
 }
 
-namespace nessa::midi {
-class player : siaudio::os_streamer {
-  float m_note_freqs[4];
-  float m_bps;
-  float m_ref_t{};
-  volatile unsigned m_index;
-
-  [[nodiscard]] constexpr float time(unsigned idx) const noexcept {
-    constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
-    return static_cast<float>(idx) / frate;
-  }
-
-protected:
-  constexpr auto bps() const noexcept { return m_bps; }
-  constexpr auto note_freq(unsigned i) const noexcept {
-    return m_note_freqs[i];
-  }
-
-  virtual constexpr float vol_at(float t) const noexcept = 0;
-
-public:
-  void set_bpm(float bpm) { m_bps = bpm / 60.0; }
-  void fill_buffer(float *buf, unsigned len) override {
-    auto idx = m_index;
-    for (auto i = 0; i < len; ++i, ++idx) {
-      *buf++ = vol_at(time(idx) - m_ref_t);
-    }
-    m_index = idx;
-  }
-
-  void play_notes(const midi::note (&n)[4]) noexcept {
-    for (auto i = 0; i < 4; i++) {
-      if (n[i] != midi::EXTEND)
-        m_note_freqs[i] = midi::note_freq(n[i]);
-    }
-    m_ref_t = time(m_index);
-
-    static constexpr const auto notes_per_beat = 2.0;
-    const auto ms_per_note = 1000.0 / (m_bps * notes_per_beat);
-    sitime::sleep_ms(ms_per_note);
-  }
-};
-} // namespace nessa::midi
-
 using namespace nessa::midi;
 static constexpr const auto note_count = 32;
 static constexpr const midi::note inst_1[note_count] = {
