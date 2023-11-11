@@ -20,7 +20,7 @@ static constexpr auto noise_env(float t_b) noexcept {
   return 1.0 - b;
 }
 
-class player {
+class player : siaudio::os_streamer {
   float m_note_freqs[4];
   float m_ref_t{};
   volatile unsigned m_index;
@@ -44,7 +44,7 @@ class player {
   }
 
 public:
-  void operator()(float *buf, unsigned len) {
+  void fill_buffer(float *buf, unsigned len) override {
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
       *buf++ = vol_at(time(idx) - m_ref_t);
@@ -93,9 +93,9 @@ static constexpr const midi::note inst_4[note_count] = {
 };
 
 void play(auto) {
-  auto s = siaudio::streamer{player{}};
+  player p{};
   for (auto i = 0; i < note_count; i++) {
-    s.producer().play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
+    p.play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
   }
 }
 
