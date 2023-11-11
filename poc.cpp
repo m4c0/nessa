@@ -96,6 +96,7 @@ void play(auto) {
   p.set_bpm(140);
   for (auto i = 0; i < note_count; i++) {
     p.play_notes({inst_1[i], inst_2[i], inst_3[i], inst_4[i]});
+    p.set_bpm(140 + i * 2);
   }
 }
 
