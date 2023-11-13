@@ -161,12 +161,15 @@ public:
     m_index = idx;
   }
 
-  void play_notes(const midi::note (&n)[4]) noexcept {
+  void set_notes(const midi::note (&n)[4]) noexcept {
     for (auto i = 0; i < 4; i++) {
       if (n[i] != midi::EXTEND)
         m_note_freqs[i] = midi::note_freq(n[i]);
     }
     m_ref_t = time(m_index);
+  }
+  void play_notes(const midi::note (&n)[4]) noexcept {
+    set_notes(n);
 
     static constexpr const auto notes_per_beat = 2.0;
     const auto ms_per_note = 1000.0 / (m_bps * notes_per_beat);
