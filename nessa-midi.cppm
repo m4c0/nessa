@@ -130,7 +130,7 @@ static constexpr const float note_freqs[] = {
 static constexpr const auto C0_MIDI_ID = 12;
 static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
-export float note_freq(note n) { return note_freqs[n - C0_MIDI_ID]; }
+export constexpr float note_freq(note n) { return note_freqs[n - C0_MIDI_ID]; }
 
 export class player : siaudio::os_streamer {
   float m_note_freqs[4];
