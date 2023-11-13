@@ -149,10 +149,6 @@ protected:
     return m_note_freqs[i];
   }
 
-  virtual constexpr float vol_at(float t) const noexcept = 0;
-
-public:
-  void set_bpm(float bpm) { m_bps = bpm / 60.0; }
   void fill_buffer(float *buf, unsigned len) override {
     auto idx = m_index;
     for (auto i = 0; i < len; ++i, ++idx) {
@@ -160,6 +156,11 @@ public:
     }
     m_index = idx;
   }
+
+  virtual constexpr float vol_at(float t) const noexcept = 0;
+
+public:
+  void set_bpm(float bpm) { m_bps = bpm / 60.0; }
 
   void set_notes(const midi::note (&n)[4]) noexcept {
     for (auto i = 0; i < 4; i++) {
