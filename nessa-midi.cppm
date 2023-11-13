@@ -134,9 +134,9 @@ export float note_freq(note n) { return note_freqs[n - C0_MIDI_ID]; }
 
 export class player : siaudio::os_streamer {
   float m_note_freqs[4];
-  float m_bps;
+  float m_bps{1};
   float m_ref_t{};
-  volatile unsigned m_index;
+  volatile unsigned m_index{};
 
   [[nodiscard]] constexpr float time(unsigned idx) const noexcept {
     constexpr const auto frate = static_cast<float>(siaudio::os_streamer::rate);
