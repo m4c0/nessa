@@ -71,7 +71,7 @@ void play(auto) {
 
 int main() {
   sith::stateless_thread t{play};
-  t.start();
+  sith::run_guard r { &t };
 
   // Give the thread some time for proper startup. Then, it's a matter of
   // joining it. Since we don't check for interruptions in the thread itself,
