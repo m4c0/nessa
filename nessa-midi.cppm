@@ -132,9 +132,16 @@ static_assert(note_freqs[A4 - C0_MIDI_ID] == 440.0f);
 
 export constexpr float note_freq(note n) { return note_freqs[n - C0_MIDI_ID]; }
 
-export class player : siaudio::timed_streamer {
+export class player {
   float m_note_freqs[4];
   float m_bps{1};
+
+  volatile unsigned m_index{};
+  unsigned m_ref_t{};
+
+  [[nodiscard]] constexpr float time(unsigned idx) const noexcept {
+    return static_cast<float>(idx) / 44100.f;
+  }
 
 protected:
   constexpr auto bps() const noexcept { return m_bps; }
@@ -152,7 +159,7 @@ public:
       if (n[i] != midi::EXTEND)
         m_note_freqs[i] = midi::note_freq(n[i]);
     }
-    reset_ref();
+    m_ref_t = m_index;
   }
   void play_notes(const midi::note (&n)[4]) noexcept {
     set_notes(n);
@@ -160,6 +167,14 @@ public:
     static constexpr const auto notes_per_beat = 2.0;
     const auto ms_per_note = 1000.0 / (m_bps * notes_per_beat);
     sitime::sleep_ms(ms_per_note);
+  }
+
+  void fill_buffer(float *buf, unsigned len) {
+    auto idx = m_index;
+    for (auto i = 0; i < len; ++i, ++idx) {
+      *buf++ = vol_at(time(idx - m_ref_t));
+    }
+    m_index = idx;
   }
 };
 } // namespace nessa::midi
